@@ -1,0 +1,19 @@
+# Render Blueprint: New > Blueprint in the Render dashboard, pick this repo, and Render builds the relay.
+services:
+  - type: web
+    name: claude-relay
+    runtime: node
+    rootDir: relay
+    plan: free            # free instances sleep after ~15 min idle; first request then takes ~1 min. Use "starter" to keep it awake.
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false       # Render asks you to paste it when you create the service
+      - key: RELAY_TOKEN
+        generateValue: true   # Render makes a long random token; copy it into the extension settings
+      - key: DEFAULT_MODEL
+        value: claude-opus-5-5
+      - key: NODE_VERSION
+        value: "22"

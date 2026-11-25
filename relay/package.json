@@ -1,0 +1,16 @@
+{
+  "name": "claude-relay",
+  "version": "1.0.0",
+  "description": "Relay between the Claude Relay Chrome extension and the Anthropic API. Holds the API key so the extension never sees it.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0"
+  }
+}

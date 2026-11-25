@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Relay",
+  "version": "1.0.0",
+  "description": "Chat with Claude in a side panel, send it files and download the files it makes, through your own relay server.",
+  "action": { "default_title": "Open Claude Relay" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["sidePanel", "storage", "unlimitedStorage", "activeTab", "scripting"],
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
+}

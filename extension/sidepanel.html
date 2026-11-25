@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Relay</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>Claude Relay</h1>
+    <div class="bar-actions">
+      <button id="newChat" class="link">New chat</button>
+      <button id="toggleSettings" class="link">Settings</button>
+    </div>
+  </header>
+
+  <section id="settings" class="settings" hidden>
+    <h2>Relay settings</h2>
+    <p class="hint">Your Anthropic API key stays on your relay server. The extension only needs the relay address and its token.</p>
+    <label>Relay URL
+      <input id="relayUrl" type="url" placeholder="https://relay.eduarcade.online" autocomplete="off" spellcheck="false">
+    </label>
+    <label>Relay token
+      <input id="relayToken" type="password" placeholder="The RELAY_TOKEN value from your server" autocomplete="off" spellcheck="false">
+    </label>
+    <div class="row">
+      <label>Model
+        <select id="model">
+          <option value="claude-opus-5-5">Claude Opus 5.5</option>
+          <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
+          <option value="claude-haiku-5-5">Claude Haiku 5.5</option>
+        </select>
+      </label>
+      <label>Effort
+        <select id="effort">
+          <option value="low">Low (fastest)</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="xhigh">Extra high</option>
+        </select>
+      </label>
+    </div>
+    <div class="row buttons">
+      <button id="saveSettings" class="primary">Save</button>
+      <button id="testRelay">Test connection</button>
+    </div>
+    <p id="settingsStatus" class="status" role="status"></p>
+  </section>
+
+  <main id="log" class="log" aria-live="polite">
+    <p id="empty" class="empty">Ask anything, attach files with the button below or drop them here, and Claude can send files back for you to download.</p>
+  </main>
+
+  <footer class="composer">
+    <ul id="attachments" class="attachments"></ul>
+    <p id="composerStatus" class="status" role="status"></p>
+    <textarea id="input" rows="3" placeholder="Message Claude"></textarea>
+    <div class="row">
+      <button id="attachBtn">Attach files</button>
+      <button id="pageBtn">Add this page</button>
+      <span class="spacer"></span>
+      <button id="sendBtn" class="primary">Send</button>
+    </div>
+    <input id="fileInput" type="file" multiple hidden>
+  </footer>
+
+  <div id="dropzone" class="dropzone" hidden>Drop files to attach</div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
