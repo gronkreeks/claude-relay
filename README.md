@@ -47,7 +47,10 @@ extension that has the token.
   toolbar icon while you're on that tab first.
 - **Files from Claude**: ask for a file ("export this as a CSV", "write me a script") and it shows up with a
   **Download** button. This works best for text formats (CSV, JSON, HTML, SVG, Markdown, code).
-- **Model and effort** are in Settings. The relay only allows Opus 5.5, Sonnet 5.5 and Haiku 5.5.
+- **Model**: pick it next to Send (Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5). **Effort** is in Settings.
+- **Usage**: each reply shows its tokens and estimated cost. The Usage button shows this chat's total and a
+  per-model total since your last reset. These are estimates from list prices; your real bill is on the
+  Claude Console usage page.
 - **New chat** clears the conversation. Chats are saved in the extension's local storage until you clear them.
 
 ## Run the relay locally instead

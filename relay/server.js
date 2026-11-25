@@ -21,6 +21,7 @@ const RATE_LIMIT_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 20);
 
 // Only these models can be asked for, so a stolen relay token can't pick anything else.
 const MODELS = {
+  "claude-fable-5-2": { fallbacks: true },
   "claude-opus-5-5": { fallbacks: true },
   "claude-sonnet-5-5": { fallbacks: true },
   "claude-haiku-5-5": { fallbacks: false }, // no server-side fallback for Haiku
@@ -178,7 +179,7 @@ async function handleChat(req, res) {
 
   const convo = [...messages];
   const newMessages = []; // what the extension appends to its history
-  const usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0 };
+  const usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
   let stopReason = null;
   let retries = 0;
 
@@ -218,9 +219,16 @@ async function handleChat(req, res) {
         continue;
       }
 
-      usage.input_tokens += message.usage.input_tokens || 0;
-      usage.output_tokens += message.usage.output_tokens || 0;
-      usage.cache_read_input_tokens += message.usage.cache_read_input_tokens || 0;
+      // Every API call is billed, so report each one right away (the extension keeps the running totals).
+      const u = {
+        model: message.model || model, // the model that answered (differs from the request after a fallback)
+        input_tokens: message.usage.input_tokens || 0,
+        output_tokens: message.usage.output_tokens || 0,
+        cache_read_input_tokens: message.usage.cache_read_input_tokens || 0,
+        cache_creation_input_tokens: message.usage.cache_creation_input_tokens || 0,
+      };
+      send("usage", u);
+      for (const k of Object.keys(usage)) usage[k] += u[k];
       stopReason = message.stop_reason;
 
       const assistantMsg = { role: "assistant", content: message.content };

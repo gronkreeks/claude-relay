@@ -105,6 +105,19 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .attachments .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attachments .size { color: var(--muted); font-variant-numeric: tabular-nums; }
 
+.msg .cost { color: var(--muted); margin-top: 6px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+.usage-table { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-variant-numeric: tabular-nums; }
+.usage-table th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 6px 4px 0; border-bottom: 1px solid var(--line); }
+.usage-table td { padding: 4px 6px 4px 0; border-bottom: 1px solid var(--line); }
+.usage-table th:not(:first-child), .usage-table td:not(:first-child) { text-align: right; }
+.settings a { color: var(--accent); }
+#usageChat { margin: 0 0 4px; }
+
+.composer select { padding: 6px 8px; }
+.composer .row { flex-wrap: wrap; }
+.composer #model { margin-left: auto; }
+
 .dropzone {
   position: fixed; inset: 8px; border: 2px dashed var(--accent); border-radius: 12px;
   background: var(--bg); display: flex; align-items: center; justify-content: center;

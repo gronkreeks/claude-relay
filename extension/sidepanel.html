@@ -11,6 +11,7 @@
     <h1>Claude Relay</h1>
     <div class="bar-actions">
       <button id="newChat" class="link">New chat</button>
+      <button id="toggleUsage" class="link">Usage</button>
       <button id="toggleSettings" class="link">Settings</button>
     </div>
   </header>
@@ -24,28 +25,31 @@
     <label>Relay token
       <input id="relayToken" type="password" placeholder="The RELAY_TOKEN value from your server" autocomplete="off" spellcheck="false">
     </label>
-    <div class="row">
-      <label>Model
-        <select id="model">
-          <option value="claude-opus-5-5">Claude Opus 5.5</option>
-          <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
-          <option value="claude-haiku-5-5">Claude Haiku 5.5</option>
-        </select>
-      </label>
-      <label>Effort
-        <select id="effort">
-          <option value="low">Low (fastest)</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
-          <option value="xhigh">Extra high</option>
-        </select>
-      </label>
-    </div>
+    <label>Effort
+      <select id="effort">
+        <option value="low">Low: fastest and cheapest</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="xhigh">Extra high: most thinking, costs the most</option>
+      </select>
+    </label>
     <div class="row buttons">
       <button id="saveSettings" class="primary">Save</button>
       <button id="testRelay">Test connection</button>
     </div>
     <p id="settingsStatus" class="status" role="status"></p>
+  </section>
+
+  <section id="usage" class="settings" hidden>
+    <h2>Usage</h2>
+    <p id="usageChat"></p>
+    <p id="usageSince" class="hint"></p>
+    <table class="usage-table">
+      <thead><tr><th>Model</th><th>Tokens in</th><th>Tokens out</th><th>Cost</th></tr></thead>
+      <tbody id="usageRows"></tbody>
+    </table>
+    <p class="hint">Costs are estimates from Anthropic's list prices. Your actual bill is on the <a href="https://platform.claude.com/usage" target="_blank" rel="noopener">Claude Console usage page</a>.</p>
+    <button id="resetUsage">Reset totals</button>
   </section>
 
   <main id="log" class="log" aria-live="polite">
@@ -59,7 +63,12 @@
     <div class="row">
       <button id="attachBtn">Attach files</button>
       <button id="pageBtn">Add this page</button>
-      <span class="spacer"></span>
+      <select id="model" aria-label="Model" title="Model">
+        <option value="claude-fable-5-2">Fable 5.2</option>
+        <option value="claude-opus-5-5">Opus 5.5</option>
+        <option value="claude-sonnet-5-5">Sonnet 5.5</option>
+        <option value="claude-haiku-5-5">Haiku 5.5</option>
+      </select>
       <button id="sendBtn" class="primary">Send</button>
     </div>
     <input id="fileInput" type="file" multiple hidden>

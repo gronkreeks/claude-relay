@@ -21,7 +21,20 @@ const els = {
   settings: $("settings"), relayUrl: $("relayUrl"), relayToken: $("relayToken"), model: $("model"), effort: $("effort"),
   settingsStatus: $("settingsStatus"), log: $("log"), empty: $("empty"), attachments: $("attachments"),
   input: $("input"), sendBtn: $("sendBtn"), fileInput: $("fileInput"), composerStatus: $("composerStatus"),
-  dropzone: $("dropzone"),
+  dropzone: $("dropzone"), usage: $("usage"), usageChat: $("usageChat"), usageSince: $("usageSince"),
+  usageRows: $("usageRows"),
+};
+
+// List prices in US dollars per million tokens (Anthropic, Nov 2026). Cache writes use the 5-minute cache.
+// Haiku 5.5 costs more once a single request's prompt passes 100K tokens; its cache prices here are estimates.
+const PRICES = {
+  "claude-fable-5-2": { name: "Fable 5.2", in: 8, out: 40, read: 0.2, write: 10 },
+  "claude-opus-5-5": { name: "Opus 5.5", in: 4, out: 20, read: 0.2, write: 5 },
+  "claude-sonnet-5-5": { name: "Sonnet 5.5", in: 2, out: 10, read: 0.1, write: 2.5 },
+  "claude-haiku-5-5": {
+    name: "Haiku 5.5", in: 0.1, out: 0.5, read: 0.01, write: 0.125,
+    longAt: 100_000, long: { in: 0.5, out: 2.5, read: 0.05, write: 0.625 },
+  },
 };
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -33,6 +46,73 @@ let history = [];     // the exact API messages (content blocks), sent back each
 let transcript = [];  // what the panel shows
 let pending = [];     // attachments waiting to be sent: { name, size, block }
 let controller = null;
+let chatUsage = { tin: 0, tout: 0, cost: 0 };             // this conversation
+let totals = { since: new Date().toISOString(), byModel: {} }; // all chats since the last reset
+
+// ---------- usage and cost ----------
+// One API call's usage (as the relay reports it) to dollars.
+function costOf(u) {
+  const p = PRICES[u.model] || PRICES[settings.model] || PRICES["claude-opus-5-5"];
+  const prompt = u.input_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens;
+  const r = p.longAt && prompt > p.longAt ? p.long : p;
+  return (u.input_tokens * r.in + u.output_tokens * r.out
+    + u.cache_read_input_tokens * r.read + u.cache_creation_input_tokens * r.write) / 1e6;
+}
+function modelName(id) {
+  return PRICES[id]?.name || id;
+}
+function fmtTokens(n) {
+  if (n < 1000) return String(n);
+  if (n < 1e6) return `${(n / 1000).toFixed(1)}K`;
+  return `${(n / 1e6).toFixed(2)}M`;
+}
+function fmtCost(c) {
+  if (c === 0) return "$0";
+  if (c < 0.001) return "under $0.001";
+  return `$${c < 1 ? c.toFixed(3) : c.toFixed(2)}`;
+}
+
+function recordUsage(u, reply) {
+  const tin = u.input_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens;
+  const cost = costOf(u);
+  reply.usage ||= { model: u.model, tin: 0, tout: 0, cost: 0 };
+  reply.usage.model = u.model;
+  reply.usage.tin += tin;
+  reply.usage.tout += u.output_tokens;
+  reply.usage.cost += cost;
+  chatUsage.tin += tin;
+  chatUsage.tout += u.output_tokens;
+  chatUsage.cost += cost;
+  const m = (totals.byModel[u.model] ||= { tin: 0, tout: 0, cost: 0, calls: 0 });
+  m.tin += tin;
+  m.tout += u.output_tokens;
+  m.cost += cost;
+  m.calls += 1;
+  store.set("chatUsage", chatUsage);
+  store.set("usageTotals", totals);
+  renderUsage();
+}
+
+function renderUsage() {
+  els.usageChat.textContent = chatUsage.tin
+    ? `This chat: about ${fmtCost(chatUsage.cost)} (${fmtTokens(chatUsage.tin)} tokens in, ${fmtTokens(chatUsage.tout)} out)`
+    : "This chat hasn't used any tokens yet.";
+  const rows = Object.entries(totals.byModel);
+  const all = rows.reduce((s, [, m]) => s + m.cost, 0);
+  const calls = rows.reduce((s, [, m]) => s + m.calls, 0);
+  const since = new Date(totals.since).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  els.usageSince.textContent = `Since ${since}: about ${fmtCost(all)} over ${calls} API call${calls === 1 ? "" : "s"}`;
+  els.usageRows.innerHTML = "";
+  for (const [id, m] of rows) {
+    const tr = document.createElement("tr");
+    for (const v of [modelName(id), fmtTokens(m.tin), fmtTokens(m.tout), fmtCost(m.cost)]) {
+      const td = document.createElement("td");
+      td.textContent = v;
+      tr.append(td);
+    }
+    els.usageRows.append(tr);
+  }
+}
 
 // ---------- small helpers ----------
 function fmtSize(n) {
@@ -165,6 +245,14 @@ function fillEntry(div, entry) {
     const p = document.createElement("p");
     p.className = `notice${n.error ? " error" : ""}`;
     p.textContent = n.text;
+    div.append(p);
+  }
+  div.querySelector(".cost")?.remove();
+  if (entry.usage && !entry.streaming) {
+    const p = document.createElement("p");
+    p.className = "cost";
+    p.textContent = `${modelName(entry.usage.model)}, ${fmtTokens(entry.usage.tin)} tokens in, `
+      + `${fmtTokens(entry.usage.tout)} out, about ${fmtCost(entry.usage.cost)}`;
     div.append(p);
   }
 }
@@ -349,6 +437,8 @@ async function send() {
       } else if (event === "file") {
         reply.pendingFile = false;
         reply.files.push(data);
+      } else if (event === "usage") {
+        recordUsage(data, reply);
       } else if (event === "notice") {
         reply.notices.push({ text: data.message });
       } else if (event === "error") {
@@ -412,9 +502,21 @@ $("testRelay").addEventListener("click", testRelay);
 $("newChat").addEventListener("click", async () => {
   if (controller) controller.abort();
   history = []; transcript = []; pending = [];
-  renderPending(); renderAll();
+  chatUsage = { tin: 0, tout: 0, cost: 0 };
+  renderPending(); renderAll(); renderUsage();
   await store.set("history", history);
   await store.set("transcript", transcript);
+  await store.set("chatUsage", chatUsage);
+});
+$("toggleUsage").addEventListener("click", () => { els.usage.hidden = !els.usage.hidden; renderUsage(); });
+$("resetUsage").addEventListener("click", async () => {
+  totals = { since: new Date().toISOString(), byModel: {} };
+  await store.set("usageTotals", totals);
+  renderUsage();
+});
+els.model.addEventListener("change", async () => {
+  settings.model = els.model.value;
+  await store.set("settings", settings);
 });
 $("attachBtn").addEventListener("click", () => els.fileInput.click());
 $("pageBtn").addEventListener("click", addCurrentPage);
@@ -443,6 +545,10 @@ document.addEventListener("paste", (e) => {
   settings = { ...settings, ...(await store.get("settings", {})) };
   history = await store.get("history", []);
   transcript = (await store.get("transcript", [])).map((t) => ({ ...t, streaming: false, pendingFile: false }));
+  chatUsage = await store.get("chatUsage", chatUsage);
+  totals = await store.get("usageTotals", totals);
+  if (!PRICES[settings.model]) settings.model = "claude-opus-5-5";
+  renderUsage();
   els.relayUrl.value = settings.relayUrl;
   els.relayToken.value = settings.relayToken;
   els.model.value = settings.model;
